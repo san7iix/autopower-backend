@@ -41,13 +41,14 @@ router.post(`${URI_ARREGLOS}/agregar`, (req, res) => {
         vehiculo,
         fecha,
         tipo_arreglo,
-        taller
+        taller,
+        mecanico
     } = req.body
 
 
     console.log(vehiculo);
 
-    mysqlConnection.query('INSERT INTO arreglo (vehiculo, fecha, tipo_arreglo, taller) VALUES (?,?,?,?)', [vehiculo, fecha, tipo_arreglo, taller], (err) => {
+    mysqlConnection.query('INSERT INTO arreglo (vehiculo, fecha, tipo_arreglo, taller, mecanico) VALUES (?,?,?,?,?)', [vehiculo, fecha, tipo_arreglo, taller,mecanico], (err) => {
         if (err) {
             console.log(err);
             res.json({
@@ -59,7 +60,7 @@ router.post(`${URI_ARREGLOS}/agregar`, (req, res) => {
     })
 
 
-    mysqlConnection.query('UPDATE vehiculo SET estado = 1 WHERE idvehiculo = ?;', [vehiculo], (err) => {
+    mysqlConnection.query('UPDATE vehiculo SET estado = 3 WHERE idvehiculo = ?;', [vehiculo], (err) => {
         if (!err) {
             res.json({
                 status: true,
@@ -107,6 +108,88 @@ router.get(`${URI_ARREGLOS}/:idvehiculo`, (req, res) => {
         })
     }
 });
+
+
+router.post(`${URI_ARREGLOS}/fecha_mecanico`, (req, res) => {
+
+    const {
+        cedula,
+        fecha
+    } = req.body    
+
+    try {
+        mysqlConnection.query('SELECT idvehiculo,direccion, idarreglo,fecha, tipo_arreglo, taller, placa FROM arreglo as arr INNER JOIN vehiculo as vh ON arr.vehiculo = vh.idvehiculo INNER JOIN taller as tll ON arr.taller = tll.idtaller WHERE mecanico = ? AND fecha = ? AND estado = 3 ;', [cedula, fecha], (err, rows) => {
+
+            if (!err) {
+                if (rows.length > 0) {
+                    res.json({
+                        data: rows,
+                        status: true
+                    })
+                } else {
+                    res.json({
+                        data: [],
+                        status: true
+                    })
+                }
+
+            } else {
+                console.error(err);
+                res.json({
+                    status: false,
+                    message: "Error al obtener los datos"
+                })
+                throw err;
+            }
+
+        })
+    } catch (error) {
+        console.error(error);
+        throw error;
+    }
+
+})
+
+
+router.put(`${URI_ARREGLOS}/mecanico/finalizar_reparacion`, (req, res) => {
+
+    const {
+        descripcion,
+        idarreglo,
+        vehiculo
+    } = req.body
+
+    try {
+        mysqlConnection.query('UPDATE arreglo SET descripcion = ? WHERE idarreglo = ?', [descripcion, idarreglo], (err) => {
+            if (!err) {
+                mysqlConnection.query('UPDATE vehiculo SET estado = 5 WHERE idvehiculo =?;', [vehiculo], (err) => {
+                    if (!err) {
+                        res.json({
+                            status: true,
+                            message: "Revisión terminada"
+                        })
+                    } else {
+                        res.json({
+                            status: false,
+                            message: "Error al editar los datos"
+                        })
+                        throw err;
+                    }
+                })
+            } else {
+                res.json({
+                    status: false,
+                    message: "Error al editar los datos"
+                })
+                throw err;
+            }
+        })
+    } catch (error) {
+        console.error(error);
+        throw error;
+    }
+})
+
 
 
 

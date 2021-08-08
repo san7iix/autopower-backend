@@ -72,18 +72,39 @@ router.post(`${URI_USUARIOS}/login`, (req, res) => {
             usuario,
             password
         } = req.body
-        mysqlConnection.query('SELECT idusuarios, usuario, password, tipo FROM usuarios WHERE usuario = ?;', [usuario], (err, rows, fields) => {
+
+        mysqlConnection.query('SELECT idusuarios FROM usuarios WHERE usuario = ?;', [usuario], (err, rows) => {
+            if(err){
+                if (rows.length < 0) {
+                    res.json({
+                        result: false,
+                        message: "No se encontró un usuario registrado"
+                    });
+                    return;
+                }
+            }
+        });
+
+
+        mysqlConnection.query('SELECT idusuarios, usuario, password FROM usuarios WHERE usuario = ?;', [usuario], (err, rows) => {
             if (!err) {
                 if (rows.length > 0) {
                     bcrypt.compare(password, rows[0].password).then((result) => {
-                        res.json({
-                            idusuario: rows[0].idusuarios,
-                            tipo: rows[0].tipo,
-                            result: result
-                        })
+                        if (result) {
+                            res.json({
+                                idusuario: rows[0].idusuarios,
+                                result: result
+                            })
+                        } else {
+                            res.json({
+                                message: "Usuario o contraseña incorrectos",
+                                result: false
+                            })
+                        }
                     })
                 } else {
                     res.json({
+                        message: "Usuario o contraseña incorrectos",
                         result: false
                     })
                 }
@@ -110,6 +131,7 @@ router.put(`${URI_USUARIOS}/editarUsuario`, (req, res) => {
         let {
             nuevo_usuario
         } = req.body;
+
 
 
         mysqlConnection.query('SELECT idusuarios FROM usuarios WHERE usuario = ?;', [usuario], (err, rows) => {
